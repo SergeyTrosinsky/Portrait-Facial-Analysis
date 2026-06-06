@@ -58,6 +58,7 @@
 **Распределение по этническим группам:**
 
 <img width="571" height="545" alt="изображение" src="https://github.com/user-attachments/assets/daf02a2e-ae8a-44f5-82d7-b89ce5f73953" />
+
 ### Гендерный анализ
 
 **Распределение по гендеру:**
