@@ -62,6 +62,7 @@
 ### Гендерный анализ
 
 **Распределение по гендеру:**
+
 <img width="389" height="411" alt="изображение" src="https://github.com/user-attachments/assets/82b2b679-fec8-415b-9cb9-ed3b00a6a0da" />
 
 ### Эмоциональный анализ
