@@ -95,6 +95,183 @@
     
 3. **Выявление зависимостей**: Оценка частоты встречаемости конкретных эмоций (например, "улыбка" или "нейтральное выражение") в разных выборках.
     
+## Структура кода
+
+Конечно, разберу код из файла `main.ipynb` поэтапно, с примерами фрагментов кода из самого ноутбука.
+
+## 1. Установка библиотек
+Первая ячейка устанавливает необходимые пакеты:
+```python
+!pip install deepface opencv-python pandas matplotlib seaborn
+```
+При выполнении видно, что устанавливается `deepface` и его зависимости (Flask, tensorflow, mtcnn и др.). Также уже установленные пакеты (pandas, matplotlib) пропускаются.
+
+## 2. Импорт модулей
+```python
+from deepface import DeepFace
+import cv2
+import os
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+import seaborn as sns
+```
+Подключаются основные библиотеки: DeepFace для анализа лиц, pandas для таблиц, matplotlib и seaborn для графиков.
+
+## 3. Задание пути к папке с изображениями
+```python
+folder = "/content/faces"
+```
+Предполагается, что в этой директории лежат фотографии лиц (например, `000097.jpg`, `000127.jpg` и т.д.).
+
+## 4. Цикл по изображениям и вызов DeepFace.analyze
+```python
+data = []
+
+for img_name in os.listdir(folder):
+    img_path = os.path.join(folder, img_name)
+
+    try:
+        result = DeepFace.analyze(
+            img_path,
+            actions=['emotion', 'gender', 'age', 'race'],
+            enforce_detection=False
+        )[0]
+
+        gender = result['dominant_gender']
+        age = result['age']
+        race = result['dominant_race']
+        emotion = result['dominant_emotion']
+        emotions = result['emotion']
+
+        data.append([
+            img_name, gender, age, race, emotion,
+            emotions['happy'], emotions['neutral'], emotions['sad'],
+            emotions['angry'], emotions['fear'], emotions['surprise'],
+            emotions['disgust']
+        ])
+
+    except:
+        continue
+```
+- Перебираются все файлы в папке.
+- `DeepFace.analyze` анализирует эмоции, пол, возраст и расу. `enforce_detection=False` позволяет не падать при отсутствии лица.
+- Из результата берутся доминирующие значения и вероятности каждой эмоции.
+- Данные накапливаются в списке `data`. Если возникает ошибка (например, лицо не найдено), файл пропускается.
+
+## 5. Формирование DataFrame
+```python
+columns = [
+    "image", "gender", "age", "race", "dominant_emotion",
+    "happy", "neutral", "sad", "angry", "fear", "surprise", "disgust"
+]
+
+df = pd.DataFrame(data, columns=columns)
+df.head()
+```
+Создаётся таблица с 12 колонками. `df.head()` показывает первые 5 строк, например:
+```
+      image gender  age            race dominant_emotion      happy  ...
+0  000097.jpg  Woman   31           white             fear   0.016909
+...
+```
+
+## 6. Сохранение результатов в CSV
+```python
+df.to_csv("analysis_results.csv", index=False)
+```
+Файл `analysis_results.csv` будет содержать все собранные данные.
+
+## 7. Визуализация распределения рас
+```python
+plt.figure()
+df["race"].value_counts().plot(kind="bar")
+plt.title("Ethnic Group Distribution")
+plt.xlabel("Ethnic Group")
+plt.ylabel("Count")
+plt.show()
+```
+Строится столбчатая диаграмма количества представителей разных рас.
+
+## 8. Визуализация распределения полов (круговая)
+```python
+plt.figure()
+df["gender"].value_counts().plot(kind="pie", autopct="%1.0f%%")
+plt.title("Gender Distribution")
+plt.ylabel("")
+plt.show()
+```
+Круговая диаграмма с процентным соотношением мужчин и женщин.
+
+## 9. Гистограмма возраста
+```python
+plt.figure()
+df["age"].plot(kind="hist", bins=20)
+plt.title("Age Distribution")
+plt.xlabel("Age")
+plt.ylabel("Count")
+plt.show()
+```
+
+## 10. Распределение доминирующих эмоций
+```python
+plt.figure()
+df["dominant_emotion"].value_counts().plot(kind="bar")
+plt.title("Dominant Emotions")
+plt.xlabel("Emotion")
+plt.ylabel("Count")
+plt.show()
+```
+
+## 11. Средние вероятности эмоций
+```python
+emotion_cols = ["happy","neutral","sad","angry","fear","surprise","disgust"]
+avg_emotions = df[emotion_cols].mean()
+
+plt.figure()
+avg_emotions.plot(kind="bar")
+plt.title("Average Emotion Probabilities")
+plt.xlabel("Emotion")
+plt.ylabel("Average Probability")
+plt.show()
+```
+Считается среднее по каждому столбцу эмоций и строится столбчатый график.
+
+## 12. Связь улыбки и расы
+```python
+df["smiling"] = df["dominant_emotion"].apply(lambda x: "smiling" if x=="happy" else "not_smiling")
+smile_by_race = pd.crosstab(df["race"], df["smiling"])
+smile_by_race.plot(kind="bar", stacked=True)
+plt.title("Smiling by Ethnic Group")
+plt.xlabel("Ethnic Group")
+plt.ylabel("Count")
+plt.show()
+```
+Создаётся новый столбец `smiling`, затем строится стековая столбчатая диаграмма, показывающая, сколько людей улыбается / не улыбается в каждой расовой группе.
+
+## 13. Средний возраст по расам
+```python
+avg_age = df.groupby("race")["age"].mean()
+plt.figure()
+avg_age.plot(kind="bar")
+plt.title("Average Age by Ethnic Group")
+plt.xlabel("Ethnic Group")
+plt.ylabel("Average Age")
+plt.show()
+```
+
+## 14. Эмоции в разрезе пола
+```python
+gender_emotion = pd.crosstab(df["gender"], df["dominant_emotion"])
+gender_emotion.plot(kind="bar", stacked=True)
+plt.title("Emotions by Gender")
+plt.xlabel("Gender")
+plt.ylabel("Count")
+plt.show()
+```
+Сравнивается, какие эмоции чаще встречаются у мужчин и у женщин.
+
+Таким образом, код выполняет полный пайплайн: загрузка изображений → анализ DeepFace → сохранение → множество графиков для исследовательского анализа.
 
 ## Как запустить проект локально
 
